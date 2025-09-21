@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minecraft服务器状态查询器</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap">
+    <style>
+        :root {
+            --primary: #4CAF50;
+            --primary-dark: #2E7D32;
+            --secondary: #2196F3;
+            --secondary-dark: #1565C0;
+            --background: #f5f5f5;
+            --surface: #ffffff;
+            --on-surface: #212121;
+            --on-primary: #ffffff;
+            --error: #f44336;
+            --border: #ddd;
+            --shadow: rgba(0, 0, 0, 0.1);
+            --transition-speed: 0.4s;
+        }
+
+        [data-theme="dark"] {
+            --background: #121212;
+            --surface: #1e1e1e;
+            --on-surface: #f5f5f5;
+            --border: #333;
+            --shadow: rgba(0, 0, 0, 0.4);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            background-color: var(--background);
+            color: var(--on-surface);
+            line-height: 1.6;
+            padding: 20px;
+            transition: background-color var(--transition-speed), color var(--transition-speed);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            position: relative;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            color: var(--primary);
+            transition: color var(--transition-speed);
+        }
+
+        .subtitle {
+            font-size: 1.2rem;
+            opacity: 0.8;
+            transition: opacity var(--transition-speed);
+        }
+
+        .card {
+            background-color: var(--surface);
+            border-radius: 10px;
+            box-shadow: 0 4px 12px var(--shadow);
+            padding: 25px;
+            margin-bottom: 25px;
+            transition: all var(--transition-speed);
+        }
+
+        .input-group {
+            display: flex;
+            margin-bottom: 20px;
+        }
+
+        input, select, button {
+            font-family: 'Noto Sans SC', sans-serif;
+            font-size: 16px;
+            padding: 12px 15px;
+            border: 1px solid var(--border);
+            border-radius: 5px;
+            outline: none;
+            background-color: var(--surface);
+            color: var(--on-surface);
+            transition: all var(--transition-speed);
+        }
+
+        input:focus, select:focus {
+            border-color: var(--primary);
+        }
+
+        input {
+            flex: 1;
+            margin-right: 10px;
+        }
+
+        select {
+            width: 120px;
+            margin-right: 10px;
+            cursor: pointer;
+        }
+
+        button {
+            background-color: var(--primary);
+            color: var(--on-primary);
+            border: none;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background-color var(--transition-speed);
+        }
+
+        button:hover {
+            background-color: var(--primary-dark);
+        }
+
+        .theme-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 8px 16px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            color: var(--on-surface);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all var(--transition-speed);
+        }
+
+        .theme-toggle:hover {
+            box-shadow: 0 0 8px var(--primary);
+        }
+
+        .theme-icon {
+            transition: transform var(--transition-speed);
+        }
+
+        .server-info {
+            display: none;
+        }
+
+        .server-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .server-icon {
+            width: 64px;
+            height: 64px;
+            border-radius: 8px;
+            border: 2px solid var(--border);
+            background-color: #1a1a1a;
+            overflow: hidden;
+        }
+
+        .server-icon img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .online-status {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-weight: 500;
+            margin-bottom: 15px;
+        }
+
+        .online {
+            background-color: #E8F5E9;
+            color: #2E7D32;
+        }
+
+        [data-theme="dark"] .online {
+            background-color: #1B5E20;
+            color: #E8F5E9;
+        }
+
+        .offline {
+            background-color: #FFEBEE;
+            color: #C62828;
+        }
+
+        [data-theme="dark"] .offline {
+            background-color: #B71C1C;
+            color: #FFEBEE;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .info-item {
+            padding: 10px;
+            border-left: 3px solid var(--primary);
+            background-color: var(--background);
+            border-radius: 0 5px 5px 0;
+            transition: background-color var(--transition-speed);
+        }
+
+        .info-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            margin-bottom: 5px;
+        }
+
+        .motd {
+            padding: 15px;
+            background-color: var(--background);
+            border-radius: 5px;
+            margin: 20px 0;
+            line-height: 1.5;
+            font-family: 'Minecraft', monospace;
+            transition: background-color var(--transition-speed);
+        }
+
+        .players {
+            margin-top: 20px;
+        }
+
+        .player-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .player {
+            padding: 5px 10px;
+            background-color: var(--primary);
+            color: var(--on-primary);
+            border-radius: 3px;
+            font-size: 0.9rem;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-left: 4px solid var(--primary);
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            color: var(--error);
+            text-align: center;
+            padding: 15px;
+            display: none;
+        }
+
+        .json-viewer {
+            margin-top: 30px;
+            border-top: 1px solid var(--border);
+            padding-top: 20px;
+        }
+
+        .json-toggle {
+            background: none;
+            border: none;
+            color: var(--primary);
+            cursor: pointer;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 5px 0;
+            margin-bottom: 10px;
+        }
+
+        .json-content {
+            background-color: var(--background);
+            border-radius: 5px;
+            padding: 15px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+            display: none;
+            transition: background-color var(--transition-speed);
+        }
+
+        .json-content.show {
+            display: block;
+            animation: fadeIn var(--transition-speed);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @font-face {
+            font-family: 'Minecraft';
+            src: url('https://cdn.jsdelivr.net/gh/IdanCo/Minecraft-Font@master/Minecraft.woff2') format('woff2');
+            font-weight: normal;
+            font-style: normal;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            opacity: 0.7;
+            font-size: 0.9rem;
+            transition: opacity var(--transition-speed);
+        }
+
+        @media (max-width: 600px) {
+            .input-group {
+                flex-direction: column;
+            }
+            
+            input, select {
+                margin-right: 0;
+                margin-bottom: 10px;
+            }
+            
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .server-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Minecraft服务器状态查询器</h1>
+            <p class="subtitle">查询Java版与基岩版Minecraft服务器状态</p>
+            <button class="theme-toggle" id="themeToggle">
+                <span class="theme-icon">🌙</span>
+                <span class="theme-text">深色模式</span>
+            </button>
+        </header>
+        
+        <div class="card">
+            <div class="input-group">
+                <input type="text" id="serverAddress" placeholder="输入服务器地址 (例如: mc.hypixel.net 或 mc.example.com:25565)" autocomplete="off">
+                <select id="serverType">
+                    <option value="java">Java版</option>
+                    <option value="bedrock">基岩版</option>
+                </select>
+                <button id="queryButton">查询状态</button>
+            </div>
+        </div>
+        
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>正在查询服务器状态...</p>
+        </div>
+        
+        <div class="error" id="error"></div>
+        
+        <div class="card server-info" id="serverInfo">
+            <div class="server-header">
+                <div class="server-icon" id="serverIcon">
+                    <!-- 服务器图标将在这里显示 -->
+                </div>
+                <div>
+                    <div id="statusIndicator"></div>
+                    <h2 id="serverHostname">服务器信息</h2>
+                </div>
+            </div>
+            
+            <div class="info-grid">
+                <div class="info-item">
+                    <div class="info-label">服务器地址</div>
+                    <div id="serverIp">-</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">服务器端口</div>
+                    <div id="serverPort">-</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">版本</div>
+                    <div id="serverVersion">-</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">协议版本</div>
+                    <div id="protocolVersion">-</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">在线玩家</div>
+                    <div id="playersOnline">-</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">最大玩家</div>
+                    <div id="playersMax">-</div>
+                </div>
+            </div>
+            
+            <div>
+                <h3>MOTD (服务器描述)</h3>
+                <div class="motd" id="motdContainer"></div>
+            </div>
+            
+            <div class="players">
+                <h3>在线玩家</h3>
+                <div class="player-list" id="playerList"></div>
+            </div>
+            
+            <div class="json-viewer">
+                <button class="json-toggle" id="jsonToggle">
+                    <span>▼</span> 查看原始JSON数据
+                </button>
+                <div class="json-content" id="jsonContent"></div>
+            </div>
+        </div>
+        
+        <footer>
+            <p>使用 <a href="https://mcsrvstat.us" target="_blank">mcsrvstat.us</a> API | <a href="https://github.com/BugPufferfish" target="_blank">充气河豚</a>制作</p>
+        </footer>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const serverAddressInput = document.getElementById('serverAddress');
+            const serverTypeSelect = document.getElementById('serverType');
+            const queryButton = document.getElementById('queryButton');
+            const serverInfo = document.getElementById('serverInfo');
+            const loading = document.getElementById('loading');
+            const error = document.getElementById('error');
+            const themeToggle = document.getElementById('themeToggle');
+            const themeIcon = themeToggle.querySelector('.theme-icon');
+            const themeText = themeToggle.querySelector('.theme-text');
+            const serverIcon = document.getElementById('serverIcon');
+            const serverHostname = document.getElementById('serverHostname');
+            const jsonToggle = document.getElementById('jsonToggle');
+            const jsonContent = document.getElementById('jsonContent');
+            
+            let currentData = null;
+
+            // 检查系统偏好并设置主题
+            function initTheme() {
+                const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                const savedTheme = localStorage.getItem('theme');
+                
+                if (savedTheme) {
+                    document.body.setAttribute('data-theme', savedTheme);
+                    updateThemeText(savedTheme);
+                } else {
+                    if (prefersDark) {
+                        document.body.setAttribute('data-theme', 'dark');
+                        updateThemeText('dark');
+                    } else {
+                        document.body.removeAttribute('data-theme');
+                        updateThemeText('light');
+                    }
+                }
+            }
+            
+            // 更新主题切换按钮文本
+            function updateThemeText(theme) {
+                if (theme === 'dark') {
+                    themeIcon.textContent = '☀️';
+                    themeText.textContent = '浅色模式';
+                } else {
+                    themeIcon.textContent = '🌙';
+                    themeText.textContent = '深色模式';
+                }
+            }
+            
+            // 切换主题
+            themeToggle.addEventListener('click', function() {
+                const currentTheme = document.body.getAttribute('data-theme');
+                if (currentTheme === 'dark') {
+                    document.body.removeAttribute('data-theme');
+                    localStorage.setItem('theme', 'light');
+                    updateThemeText('light');
+                } else {
+                    document.body.setAttribute('data-theme', 'dark');
+                    localStorage.setItem('theme', 'dark');
+                    updateThemeText('dark');
+                }
+            });
+            
+            // 查询服务器状态
+            function queryServer() {
+                const address = serverAddressInput.value.trim();
+                const serverType = serverTypeSelect.value;
+                
+                if (!address) {
+                    showError('请输入服务器地址');
+                    return;
+                }
+                
+                loading.style.display = 'block';
+                serverInfo.style.display = 'none';
+                error.style.display = 'none';
+                
+                const apiUrl = serverType === 'java' 
+                    ? `https://api.mcsrvstat.us/3/${encodeURIComponent(address)}`
+                    : `https://api.mcsrvstat.us/bedrock/3/${encodeURIComponent(address)}`;
+                
+                fetch(apiUrl, {
+                    headers: {
+                        'User-Agent': 'MinecraftServerChecker/1.0'
+                    }
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('服务器查询失败');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    currentData = data;
+                    displayServerInfo(data, serverType);
+                })
+                .catch(err => {
+                    showError('查询失败: ' + err.message);
+                })
+                .finally(() => {
+                    loading.style.display = 'none';
+                });
+            }
+            
+            // 显示服务器信息
+            function displayServerInfo(data, serverType) {
+                const statusIndicator = document.getElementById('statusIndicator');
+                const serverIp = document.getElementById('serverIp');
+                const serverPort = document.getElementById('serverPort');
+                const serverVersion = document.getElementById('serverVersion');
+                const protocolVersion = document.getElementById('protocolVersion');
+                const playersOnline = document.getElementById('playersOnline');
+                const playersMax = document.getElementById('playersMax');
+                const motdContainer = document.getElementById('motdContainer');
+                const playerList = document.getElementById('playerList');
+                
+                // 清空服务器图标
+                serverIcon.innerHTML = '';
+                
+                if (data.online) {
+                    statusIndicator.innerHTML = '<div class="online-status online">在线</div>';
+                    
+                    serverIp.textContent = data.ip || '-';
+                    serverPort.textContent = data.port || '-';
+                    serverVersion.textContent = data.version || '-';
+                    
+                    // 显示主机名（如果有）
+                    if (data.hostname) {
+                        serverHostname.textContent = data.hostname;
+                    } else {
+                        serverHostname.textContent = serverAddressInput.value;
+                    }
+                    
+                    if (serverType === 'java' && data.protocol) {
+                        protocolVersion.textContent = `协议 ${data.protocol.version} (${data.protocol.name || '未知'})`;
+                    } else {
+                        protocolVersion.textContent = serverType === 'java' ? '-' : 'N/A (基岩版)';
+                    }
+                    
+                    if (data.players) {
+                        playersOnline.textContent = data.players.online || '0';
+                        playersMax.textContent = data.players.max || '0';
+                    } else {
+                        playersOnline.textContent = '0';
+                        playersMax.textContent = '0';
+                    }
+                    
+                    // 显示服务器图标
+                    if (data.icon) {
+                        const iconImg = document.createElement('img');
+                        iconImg.src = data.icon;
+                        iconImg.alt = '服务器图标';
+                        serverIcon.appendChild(iconImg);
+                    } else {
+                        serverIcon.innerHTML = '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#aaa;">无图标</div>';
+                    }
+                    
+                    // 渲染MOTD
+                    if (data.motd && data.motd.html) {
+                        motdContainer.innerHTML = data.motd.html.join('<br>');
+                    } else {
+                        motdContainer.textContent = '无MOTD信息';
+                    }
+                    
+                    // 显示在线玩家
+                    playerList.innerHTML = '';
+                    if (data.players && data.players.list && data.players.list.length > 0) {
+                        data.players.list.forEach(player => {
+                            const playerElement = document.createElement('div');
+                            playerElement.className = 'player';
+                            playerElement.textContent = player.name;
+                            playerList.appendChild(playerElement);
+                        });
+                    } else {
+                        playerList.innerHTML = '<p>没有在线玩家或玩家列表不可用</p>';
+                    }
+                    
+                    serverInfo.style.display = 'block';
+                } else {
+                    statusIndicator.innerHTML = '<div class="online-status offline">离线</div>';
+                    
+                    serverIp.textContent = data.ip || '-';
+                    serverPort.textContent = data.port || '-';
+                    serverVersion.textContent = '-';
+                    protocolVersion.textContent = '-';
+                    playersOnline.textContent = '-';
+                    playersMax.textContent = '-';
+                    serverHostname.textContent = serverAddressInput.value;
+                    
+                    // 显示默认离线图标
+                    serverIcon.innerHTML = '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#aaa;">离线</div>';
+                    
+                    motdContainer.textContent = '服务器离线，无法获取MOTD';
+                    playerList.innerHTML = '';
+                    
+                    serverInfo.style.display = 'block';
+                }
+                
+                // 更新JSON内容
+                jsonContent.textContent = JSON.stringify(data, null, 2);
+            }
+            
+            // 显示错误信息
+            function showError(message) {
+                error.textContent = message;
+                error.style.display = 'block';
+            }
+            
+            // JSON查看器切换
+            jsonToggle.addEventListener('click', function() {
+                jsonContent.classList.toggle('show');
+                const arrow = jsonToggle.querySelector('span');
+                arrow.textContent = jsonContent.classList.contains('show') ? '▲' : '▼';
+            });
+            
+            // 事件监听
+            queryButton.addEventListener('click', queryServer);
+            
+            serverAddressInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    queryServer();
+                }
+            });
+            
+            // 初始化主题
+            initTheme();
+        });
+    </script>
+</body>
+</html>
